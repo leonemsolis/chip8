@@ -1,3 +1,5 @@
+use rand::random;
+
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 const RAM_SIZE: usize = 4096;
@@ -241,6 +243,45 @@ impl Emu {
             (0xB, _, _, _) => {
                 let nnn = op & 0xFFF;
                 self.pc = (self.v_reg[0] as u16) + nnn;
+            },
+            // VX = rand() & NN
+            (0xC, _, _, _) => {
+                let x = digit2 as usize;
+                let nn = (op & 0xFF) as u8;
+                let rng: u8 = random();
+                self.v_reg[x] = rng & nn;
+            },
+            // DRAW
+            (0xD, _, _, _) => {
+                // Get x and y for the sprite
+                let x_coord = self.v_reg[digit2 as usize] as u16;
+                let y_coord = self.v_reg[digit3 as usize] as u16;
+                // The last digit determines how many rows high the sprite is
+                let num_rows = digit4;
+                // Keep track if any pixels were flipped
+                let mut flipped = false;
+                // Iterate over each row of the sprite
+                for y_line in 0..num_rows {
+                    // Determine which mem addr the row's data is stored
+                    let addr = self.i_reg + y_line as u16;
+                    let pixels = self.ram[addr as usize];
+                    // Iterate over each column in the row
+                    for x_line in 0..8 {
+                        // Use a mask to fetch current pixel's bit. Only flip if a 1
+                        if (pixels & (0b1000_0000 >> x_line)) != 0 {
+                            // Sprites should wrap around screen, so apply modulo
+                            let x = (x_coord + x_line) as usize % SCREEN_WIDTH;
+                            let y = (y_coord + y_line) as usize % SCREEN_HEIGHT;
+                            // Get our pixel's index for our 1D screen array
+                            let idx = x + SCREEN_WIDTH * y;
+                            // Check if we're about to flip the pixel and set
+                            flipped |= self.screen[idx];
+                            self.screen[idx] ^= true;
+                        }
+                    }
+                }
+                // Populate VF register
+                self.v_reg[0xF] = if flipped { 1 } else { 0 };
             },
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
