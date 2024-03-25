@@ -1,4 +1,3 @@
-use std::any::Any;
 use rand::random;
 
 pub const SCREEN_WIDTH: usize = 64;
@@ -264,7 +263,7 @@ impl Emu {
                 // Iterate over each row of the sprite
                 for y_line in 0..num_rows {
                     // Determine which mem addr the row's data is stored
-                    let addr = self.i_reg + y_line as u16;
+                    let addr = self.i_reg + y_line;
                     let pixels = self.ram[addr as usize];
                     // Iterate over each column in the row
                     for x_line in 0..8 {
@@ -352,7 +351,7 @@ impl Emu {
                 let vx = self.v_reg[x] as f32;
                 
                 let hundreds = (vx / 100.0).floor() as u8;
-                let tens = ((vx / 10.0) % 10).floor() as u8;
+                let tens = ((vx / 10.0) % 10.0).floor() as u8;
                 let ones = (vx % 10.0) as u8;
                 
                 self.ram[self.i_reg as usize] = hundreds;
