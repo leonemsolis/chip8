@@ -283,6 +283,62 @@ impl Emu {
                 // Populate VF register
                 self.v_reg[0xF] = if flipped { 1 } else { 0 };
             },
+            // SKIP KEY PRESS
+            (0xE, _, 9, 0xE) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+                if key {
+                    self.pc += 2;
+                }
+            },
+            // SKIP KEY RELEASE
+            (0xE, _, 0xA, 1) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x];
+                let key = self.keys[vx as usize];
+                if !key {
+                    self.pc += 2;
+                }
+            },
+            // VX = DT
+            (0xF, _, 0, 7) => {
+                let x = digit2 as usize;
+                self.v_reg[x] = self.dt;
+            },
+            // WAIT KEY
+            (0xF, _, 0, 0xA) => {
+                let x = digit2 as usize;
+                let mut pressed = false;
+                for i in 0..self.keys.len() {
+                    if self.keys[i] {
+                        self.v_reg[x] = i as u8;
+                        pressed = true;
+                        break;
+                    }
+                }
+                
+                // Go back for proper key registration
+                if !pressed {
+                    self.pc -= 2;
+                }
+            },
+            // DT = VX
+            (0xF, _, 1, 5) => {
+                let x = digit2 as usize;
+                self.dt = self.v_reg[x];
+            },
+            // ST = VX
+            (0xF, _, 1, 8) => {
+                let x = digit2 as usize;
+                self.st = self.v_reg[x];
+            },
+            // I += VX
+            (0xF, _, 1, 0xE) => {
+                let x = digit2 as usize;
+                let vx = self.v_reg[x] as u16;
+                self.i_reg = self.i_reg.wrapping_add(vx);
+            },
             (_, _, _, _) => unimplemented!("Unimplemented opcode: {}", op),
         }
     }
